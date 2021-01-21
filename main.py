@@ -1,11 +1,22 @@
 from LHC import LHC
 import matplotlib.pyplot as plt
 import numpy as np
+import Damper
+from scipy.constants import e, m_p, c
 
+
+print("Generating machine")
 machine = LHC(machine_configuration='6.5_TeV_collision_tunes', n_segments=29, D_x=10)
+
+print("Machine generated")
+
+damper=Damper.Damper(machine)
+machine.one_turn_map.append(damper.damper)
+
 
 macroparticlenumber_track = 50000
 intensity = 1e11
+chroma =0.
 epsn_x  = 2.5e-6
 epsn_y  = 3.5e-6
 sigma_z = 0.05

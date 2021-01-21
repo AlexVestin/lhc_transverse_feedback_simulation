@@ -11,7 +11,7 @@ from ..core import Parameters, default_macros
 @author Jani Komppula
 @date: 11/10/2017
 """
-
+#for i, (parameters, signal, delay) in enumerate(register):
 class Register(object):
     """
     Stores signals to the register. The obejct is iterable, i.e. iteration
@@ -75,7 +75,7 @@ class Register(object):
 
         return self
 
-    def next(self):
+    def __next__(self):
         if self._n_iter_left < 1:
             raise StopIteration
 

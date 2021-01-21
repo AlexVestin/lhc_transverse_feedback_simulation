@@ -157,7 +157,7 @@ class GenericOneTurnMapObject(object):
                                                             self._beta_x, beta_beam)
             n_segments = self._parameters_x['n_segments']
             n_bins_per_segment = self._parameters_x['n_bins_per_segment']
-            self._signal_x = np.zeros(n_segments * n_bins_per_segment)
+            self._signal_x = np.zeros(int(n_segments * n_bins_per_segment))
         
         
         if self._processors_y is not None:
@@ -167,7 +167,7 @@ class GenericOneTurnMapObject(object):
         
             n_segments = self._parameters_y['n_segments']
             n_bins_per_segment = self._parameters_y['n_bins_per_segment']
-            self._signal_y = np.zeros(n_segments * n_bins_per_segment)
+            self._signal_y = np.zeros(int(n_segments * n_bins_per_segment))
 
     def _get_slice_sets(self, superbunch):
         if self._mpi:
@@ -258,8 +258,10 @@ class GenericOneTurnMapObject(object):
         return parameters
     
     def _parse_relevant_bunches(self, local_slice_sets, all_slice_sets, processors, beta_beam):
-        circumference = all_slice_sets[0].circumference
-        h_bunch = all_slice_sets[0].h_bunch
+        print(all_slice_sets[0])
+        #circumference = 11123#all_slice_sets[0].circumference
+        circumference = 26658.8832
+        h_bunch = 3564
         
         time_scale = 0.
         
@@ -273,8 +275,10 @@ class GenericOneTurnMapObject(object):
         set_counter = np.zeros(len(all_slice_sets), dtype=int)
         
         for i, slice_set in enumerate(local_slice_sets):
-            local_set_edges[i,0] = np.min(slice_set.z_bins-slice_set.bucket_id*circumference/float(h_bunch))/(c*beta_beam)
-            local_set_edges[i,1] = np.max(slice_set.z_bins-slice_set.bucket_id*circumference/float(h_bunch))/(c*beta_beam)
+            #local_set_edges[i,0] = np.min(slice_set.z_bins-slice_set.bucket_id*circumference/float(h_bunch))/(c*beta_beam)
+            #local_set_edges[i,1] = np.max(slice_set.z_bins-slice_set.bucket_id*circumference/float(h_bunch))/(c*beta_beam)
+            local_set_edges[i,0] = np.min(slice_set.z_bins-1*circumference/float(h_bunch))/(c*beta_beam)
+            local_set_edges[i,1] = np.max(slice_set.z_bins-1*circumference/float(h_bunch))/(c*beta_beam)
 
             
         
@@ -283,8 +287,11 @@ class GenericOneTurnMapObject(object):
         
         counter = 0
         for i, slice_set in enumerate(all_slice_sets):
-            set_min = np.min(slice_set.z_bins-slice_set.bucket_id*circumference/float(h_bunch))/(c*beta_beam)
-            set_max = np.max(slice_set.z_bins-slice_set.bucket_id*circumference/float(h_bunch))/(c*beta_beam)
+            #set_min = np.min(slice_set.z_bins-slice_set.bucket_id*circumference/float(h_bunch))/(c*beta_beam)
+            #set_max = np.max(slice_set.z_bins-slice_set.bucket_id*circumference/float(h_bunch))/(c*beta_beam)
+            set_min = np.min(slice_set.z_bins-1*circumference/float(h_bunch))/(c*beta_beam)
+            set_max = np.max(slice_set.z_bins-1*circumference/float(h_bunch))/(c*beta_beam)
+    #       
     #        print 'set_min ' + str(set_min) + ' and (local_min - time_scale)' + str((local_min - time_scale))
             if (set_max > (local_min - time_scale)) and (set_min < (local_max + time_scale)):
                 included_sets.append(i)

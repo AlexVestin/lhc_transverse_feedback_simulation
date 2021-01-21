@@ -54,12 +54,12 @@ class Convolution(object):
 
         # List of impulses to the corresponding segments
         self._impulses_to_segments = []
-        for i in xrange(self._n_seg):
+        for i in range(self._n_seg):
             self._impulses_to_segments.append([])
 
         ref_points = []
 
-        for i in xrange(self._n_seg):
+        for i in range(self._n_seg):
             i_from = i*self._n_bins
             i_to = (i+1)*self._n_bins
 
@@ -126,7 +126,7 @@ class Convolution(object):
             # response is zero.
             n_bins_per_segment = self._n_bins + 2*extra_bins
 
-            for k in xrange(self._n_seg):
+            for k in range(self._n_seg):
 
                 i_from = k * n_bins_per_segment
                 i_to = (k+1) * n_bins_per_segment
@@ -159,7 +159,7 @@ class Convolution(object):
             self._init_convolution(parameters)
 
         # calculates the impulses caused by the segments
-        for i in xrange(self._n_seg):
+        for i in range(self._n_seg):
             i_from = i*self._n_bins
             i_to = (i+1)*self._n_bins
             np.copyto(self._impulses_from_segments[i][:len(self._dashed_impulse_responses[i])],
@@ -168,7 +168,7 @@ class Convolution(object):
 
         # gathers the output signal
         output_signal = np.zeros(len(signal))
-        for i in xrange(self._n_seg):
+        for i in range(self._n_seg):
 
             i_from = i*self._n_bins
             i_to = (i+1)*self._n_bins
@@ -294,7 +294,7 @@ class WaveletGenerator(Convolution):
         bin_spacing = np.mean(impulse_ref_edges[:,1]-impulse_ref_edges[:,0])
         impulse_values = np.zeros(len(impulse_bin_mids))
 
-        for i in xrange(self._i_from,(self._i_to+1)):
+        for i in range(self._i_from,(self._i_to+1)):
             copy_mid = i*self._spacing
             copy_from = copy_mid - 0.5 * bin_spacing
             copy_to = copy_mid + 0.5 * bin_spacing
@@ -400,7 +400,7 @@ class ConvolutionFilter(Convolution):
             ref_points = []
             mids = bin_mids(impulse_ref_edges)
             n_bins_per_segment = int(len(impulse)/n_segments)
-            for i in xrange(n_segments):
+            for i in range(n_segments):
                 i_from = i * n_bins_per_segment
                 i_to = (i + 1) * n_bins_per_segment
                 ref_points.append(np.mean(mids[i_from:i_to]))
@@ -424,7 +424,7 @@ class ConvolutionFilter(Convolution):
                 f_h = self._normalization[1]
 
                 norm_coeff = 0.
-                for i in xrange(-1000,1000):
+                for i in range(-1000,1000):
                     x = float(i)* (1./f_h) * self._scaling
                     norm_coeff += self._impulse_response(x)
                 #print norm_coeff

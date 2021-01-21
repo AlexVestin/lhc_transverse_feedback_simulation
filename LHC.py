@@ -20,6 +20,8 @@ class LHC(Synchrotron):
         pp.longitudinal_mode = 'non-linear'
         pp.alpha       = 3.225e-04
         pp.h_RF        = 35640
+        self.h_RF=     pp.h_RF
+        self.h_bunch = int(self.h_RF/10.)
         pp.mass        = m_p
         pp.charge      = e
         pp.RF_at       = 'middle'
@@ -87,7 +89,9 @@ class LHC(Synchrotron):
 
         else:
             raise ValueError('optics_mode not recognized!')
-
+        self.beta_y=pp.beta_y
+        self.beta_x=pp.beta_x
+        self.circumference=pp.circumference 
         # detunings
         pp.Qp_x        = 0
         pp.Qp_y        = 0
