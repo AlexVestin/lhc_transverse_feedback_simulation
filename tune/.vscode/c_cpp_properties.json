@@ -1,0 +1,22 @@
+{
+  "env": {
+    "myDefaultIncludePath": ["${workspaceFolder}", "${workspaceFolder}"],
+    "myCompilerPath": "/usr/bin/g++"
+  },
+  "configurations": [
+    {
+      "name": "Linux",
+      "intelliSenseMode": "clang-x64",
+      "includePath": ["${myDefaultIncludePath}", "/home/alex/skia"],
+      "compilerPath": "/usr/bin/g++",
+      "cStandard": "c11",
+      "cppStandard": "c++17",
+      "browse": {
+        "path": ["${workspaceFolder}"],
+        "limitSymbolsToIncludedHeaders": true,
+        "databaseFilename": ""
+      }
+    }
+  ],
+  "version": 4
+}
