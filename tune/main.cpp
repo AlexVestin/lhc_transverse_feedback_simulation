@@ -22,7 +22,7 @@ extern "C" {
 
 // Number of samples to use for analysis
 #define NUM_PICKUPS 1
-#define N 256*NUM_PICKUPS
+#define N 2048*NUM_PICKUPS
 #define PI 3.14159265359
 // Sample data signal 
 
@@ -30,8 +30,6 @@ extern "C" {
 // #define FREQUENCY 82.13
 #define AVG_NOISE_AMT 0.03
 #define REVOLUTION_FREQUENCY 11245.f
-
-
 
 
 std::vector<double> fillSampleData(std::vector<double>& data, float frequency) {
@@ -69,10 +67,10 @@ int main() {
     int counter = 0; 
 
     std::string testFile = "tune_data/7343/match10/07343_64k_B1H_Q10_20181025_05h05m39s.h5";
-     HDFLib::HDFFile test = HDFLib::HDFFile(testFile);
-     test.open();
-     test.setTranspose(true);
-     std::cout<<"data: "<<test[255].get()[0]<<std::endl;
+    //HDFLib::HDFFile test = HDFLib::HDFFile(testFile);
+    //test.open();
+    //test.setTranspose(true);
+    //std::cout<<"data: "<<test[255].get()[0]<<std::endl;
     
     #ifdef SKIA
         InitWindow();
@@ -82,7 +80,7 @@ int main() {
             h.performAnalysis(sampleData);
             fftw_execute(p);
             fillMagnitude(out, magnitude);
-            running = DrawPoints(magnitude, frequency);
+            running = DrawPoints(magnitude, frequency, N, REVOLUTION_FREQUENCY);
             //usleep(10000); // = 0.01 second.
             counter++;
         }

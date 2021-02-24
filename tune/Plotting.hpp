@@ -82,10 +82,11 @@ SkCanvas* dCanvas;
 GLFWwindow* window;
 
 
-int firstIndex = -1;
+double firstFrequency = -1;
+const bool usefirstFrequency = true;
 int counter = 0;
 double avgError = 0, currentAvgError = 0;
-const bool useFirstIndex = true;
+
 
 
 int frequencyToBin(double frequency, int nfft, int sampleRate) {
@@ -179,7 +180,7 @@ void DrawString(const char* text, SkFont& font, SkPaint& paint, int x, int y) {
     dCanvas->drawTextBlob(blob, x, y, paint);
 }
 
-bool DrawPoints(std::vector<double> data, double realFrequency) {
+bool DrawPoints(std::vector<double> data, double realFrequency, int nfft, int sampleRate) {
     glfwPollEvents();
     SkPaint paint;
     paint.setColor(SK_ColorWHITE);
@@ -191,8 +192,7 @@ bool DrawPoints(std::vector<double> data, double realFrequency) {
 
 
     // freq res and stuff
-    const int revFrequency = 11245;
-    const float frequencyResolution = revFrequency / (float)((data.size() - 1) * 2);
+    double frequencyResolution = sampleRate / (double)nfft;
 
     // Find max, index of max and mean
     int maxIndex = -1;
@@ -208,15 +208,17 @@ bool DrawPoints(std::vector<double> data, double realFrequency) {
     
     // Sizing of graph
     int size = data.size();
-    const int rangeSize = 10;
+    
 
-    if (firstIndex == -1) {
-        firstIndex = maxIndex;
+    if (firstFrequency == -1) {
+        firstFrequency = maxIndex;
     }
 
-    const int idx = !useFirstIndex ? maxIndex : firstIndex; 
-    int lower = std::max(idx - rangeSize, 0);
-    int upper = std::min(idx + rangeSize, size - 1);
+    int frange = 100;
+
+    double idx = !usefirstFrequency ? realFrequency : firstFrequency; 
+    int lower = std::max(frequencyToBin(idx - frange, nfft, sampleRate), 0);
+    int upper = std::min(frequencyToBin(idx + frange, nfft, sampleRate), size - 1);
     const int nPoints = upper - lower;
 
     const double width = ((float)kWidth / 2.) / (upper - lower) ;
@@ -224,7 +226,7 @@ bool DrawPoints(std::vector<double> data, double realFrequency) {
 
     // If scale for maxvalue
     // const double height = ((float)kHeight / 4.) / maxValue;
-    const double height = ((float)kHeight / 4.) / 10.;
+    const double height = ((float)kHeight / 4.);
 
     const int s = 4;
     const int ms = 6;
