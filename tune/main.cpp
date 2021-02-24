@@ -7,7 +7,6 @@
 
 #include <math.h>
 
-
 #ifdef SKIA
     #include "Plotting.hpp"
 #endif

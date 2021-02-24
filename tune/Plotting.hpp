@@ -88,6 +88,16 @@ double avgError = 0, currentAvgError = 0;
 const bool useFirstIndex = true;
 
 
+int frequencyToBin(double frequency, int nfft, int sampleRate) {
+    double fRes = sampleRate / (double)nfft;
+    return frequency / fRes; 
+}
+
+double binToFrequency(int bin, int nfft, int sampleRate) {
+    double fRes = sampleRate / (double)nfft;
+    return fRes * bin; 
+}
+
 void error_callback(int error, const char* description) {
 	fputs(description, stderr);
 }
@@ -301,9 +311,6 @@ bool DrawPoints(std::vector<double> data, double realFrequency) {
     dContext->flush();
     glfwSwapBuffers(window);
     dCanvas->restore();
-
-
-
     return !glfwWindowShouldClose(window);
 }
 
