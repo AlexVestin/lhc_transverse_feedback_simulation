@@ -1,50 +1,19 @@
+#ifndef INCLUDE_HDFLIB_H_
+
+#define INCLUDE_HDFLIB_H_
+
 #include <string>
 #include <vector>
 #include <stdexcept>
 #include <sstream>
 #include <iostream>
 #include <map>
-//#include <boost/filesystem.hpp>
+#include <filesystem>
 #include <tuple>
 #include <chrono>
-#include <memory>
+
 
 #include "hdf5.h"
-
-herr_t file_info(hid_t loc_id, const char *name, void *opdata)
-{
-    H5G_stat_t statbuf;
-
-    /*
-     * Get type of the object and display its name and type.
-     * The name of the object is passed to this function by 
-     * the Library. Some magic :-)
-     */
-    H5Gget_objinfo(loc_id, name, 0, &statbuf);
-    switch (statbuf.type) {
-    case H5G_GROUP: 
-         printf(" Object with name %s is a group \n", name);
-         break;
-    case H5G_DATASET: 
-         printf(" Object with name %s is a dataset \n", name);
-         break;
-    case H5G_TYPE: 
-         printf(" Object with name %s is a named datatype \n", name);
-         break;
-    default:
-         printf(" Unable to identify an object ");
-    }
-    return 0;
- }
-
-#include <fstream>
-
-inline bool exists_test0 (const std::string& name) {
-    std::ifstream f(name.c_str());
-    bool good = f.good();
-    f.close(); 
-    return good;
-}
 
 namespace HDFLib {
 
@@ -64,12 +33,7 @@ bool powerOf2(T value ) {
 class HDFFile {
 public:
 	HDFFile(const std::string& filename ): _filename(filename) {
-		_exists = exists_test0(filename);
-        if(!_exists) {
-            std::cout << "File doesn't exist: " << _exists << std::endl;    
-            exit(1);
-        }
-        std::cout << "Exists: " << _exists << std::endl;
+		_exists = std::filesystem::exists( _filename );
 	}
 
 	~HDFFile() {
@@ -79,7 +43,6 @@ public:
 	void open(int flags=0) {
 		//just open if file exists
 		if (_exists) {
-
 			openHDF();
 			_open = true;
 		}
@@ -120,7 +83,7 @@ public:
 			return 0.0f;
 		}
 		else{
-			
+
 			float megabytes=static_cast<float>( _turns*_bunches*sizeof(int16_t))/1000000.0f;
 			float time_in_s=static_cast<float>(_time_to_write_data)/1000000000.0f;
 			return megabytes/time_in_s;
@@ -347,7 +310,7 @@ public:
 			throw std::runtime_error("File not open while trying to read data");
 		}
 		std::size_t start_time=getCurrentTime();
-		_status = H5Dwrite(_dataset_id, H5T_NATIVE_SHORT, H5S_ALL, H5S_ALL, H5P_DEFAULT, data);		
+		_status = H5Dwrite(_dataset_id, H5T_NATIVE_SHORT, H5S_ALL, H5S_ALL, H5P_DEFAULT, data);
 		_time_to_write_data=getCurrentTime()-start_time;
 		if (_status < 0)
 		{
@@ -464,7 +427,7 @@ public:
 		return _writeAttributeArrayBool("HeaderOK", &headerOK);
 	}
 
-	
+
 
 
 
@@ -1048,7 +1011,6 @@ private:
 
 std::unique_ptr<int16_t> _getStride(hsize_t count0, hsize_t count1, hsize_t offset0, hsize_t offset1,hsize_t stride0=1,hsize_t stride1=1,hsize_t block0=1,hsize_t block1=1) {
 	if (!_open) {
-        std::cout << "Getting stride" << std::endl;
 		throw std::runtime_error("File not open while trying to read row");
 	}
 	hsize_t     count[2] = {count0, count1};
@@ -1394,8 +1356,7 @@ void openHDF() {
 
 	//open file
 	_file_id = H5Fopen (_filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
-    
-    if (_file_id < 0)
+	if (_file_id < 0)
 	{
 		std::ostringstream temp;
 		temp << "opening of file " << _filename << " failed";
@@ -1413,15 +1374,12 @@ void openHDF() {
 
 	//open root group
 	_root_group_id = H5Gopen1(_file_id, "/");
-    std::cout << "Root grp: " << _root_group_id << std::endl;
 	if (_root_group_id < 0)
 	{
-        std::cout << "Failed???\n" << std::endl;
 		std::ostringstream temp;
 		temp << "opening of group / failed";
 		throw std::runtime_error(temp.str());
 	}
-
 
 	//get number of items in root group
 	_status = H5Gget_num_objs(_root_group_id, &nobj);
@@ -1435,9 +1393,8 @@ void openHDF() {
 		throw std::runtime_error("The root group / should only contain one object");
 	}
 
-
 	//get the name, should be either B1 or B2
-	len = H5Gget_objname_by_idx(_root_group_id, 0, group_name, (size_t)MAX_NAME );
+	len = H5Gget_objname_by_idx(_root_group_id, 0, group_name, static_cast<std::size_t>(MAX_NAME) );
 	if (std::string(group_name) != "B1" && std::string(group_name) != "B2") {
 		throw std::runtime_error("group /B1 or /B2 not found");
 	}
@@ -1449,14 +1406,7 @@ void openHDF() {
 		throw std::runtime_error(temp.str());
 	}
 
-    printf(" Objects in the root group are:\n");
-    printf("\n");
-
-    H5Giterate(_file_id, "B2", NULL, file_info, NULL);
-
 	_setBeam(group_name);
-
-    std::cout << "Group name: " << group_name  << std::endl;
 
 	//open the group
 	_group_id = H5Gopen1(_root_group_id, group_name);
@@ -1482,12 +1432,12 @@ void openHDF() {
 		throw std::runtime_error(temp.str());
 		throw std::runtime_error("");
 	}
-	if(nobj==2){
-		_attributes_enabled=true;
+	if(nobj==1){
+		_attributes_enabled=false;
 	}
 	for(unsigned i=0;i<nobj;i++){
 		//get the name, should be either horizontal or vertical
-		len = H5Gget_objname_by_idx(_group_id, i, dataset_name, (size_t)MAX_NAME );
+		len = H5Gget_objname_by_idx(_group_id, i, dataset_name, static_cast<std::size_t>(MAX_NAME) );
 		if (std::string(dataset_name) != "vertical" && std::string(dataset_name) != "horizontal") {
 			continue;
 		}
@@ -1559,8 +1509,6 @@ void openHDF() {
 	if(_attributes_enabled){
 		//open the group
 		_group_attr_id = H5Gopen1(_group_id, "attributes");
-
-        std::cout << "ATTR ID: " << _group_attr_id << std::endl;
 		if (_group_attr_id < 0)
 		{
 			std::ostringstream temp;
@@ -1579,7 +1527,7 @@ void openHDF() {
 		}
 
 		for(unsigned i=0;i<nobj;i++){
-			len = H5Gget_objname_by_idx(_group_attr_id, i, dataset_name, (size_t)MAX_NAME );
+			len = H5Gget_objname_by_idx(_group_attr_id, i, dataset_name, static_cast<std::size_t>(MAX_NAME) );
 			//check so it is a dataset
 			otype =  H5Gget_objtype_by_idx(_group_attr_id, i );
 			if (otype != H5G_DATASET) {
@@ -1619,7 +1567,7 @@ void openHDF() {
 			H5Sclose(aspace);
 
 			std::string attribute_name_str = dataset_name;
-			//headers
+					//headers
 			if (_attributes.count(attribute_name_str)) {
 				//check dim
 				if (adim != getDim(_attributes[attribute_name_str])) {
@@ -1849,3 +1797,4 @@ void createHDF() {
 };
 
 }
+#endif

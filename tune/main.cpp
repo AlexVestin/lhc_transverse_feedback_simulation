@@ -69,12 +69,11 @@ int main() {
     bool running = true;
     int counter = 0; 
 
-    std::string testFile = "tune_data/7343/match10/07343_64k_B1H_Q9_20181025_05h05m34s.h5";
-    HDFLib::HDFFile test = HDFLib::HDFFile(testFile);
-    test.open();
-    test.setTranspose(true);
-
-    std::cout<<"data: "<<test[255].get()[0]<<std::endl;
+    std::string testFile = "tune_data/7343/match10/07343_64k_B1H_Q10_20181025_05h05m39s.h5";
+     HDFLib::HDFFile test = HDFLib::HDFFile(testFile);
+     test.open();
+     test.setTranspose(true);
+     std::cout<<"data: "<<test[255].get()[0]<<std::endl;
     
     #ifdef SKIA
         InitWindow();
