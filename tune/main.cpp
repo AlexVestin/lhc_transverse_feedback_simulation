@@ -21,8 +21,8 @@ extern "C" {
 }
 
 // Number of samples to use for analysis
-#define NUM_PICKUPS 1
-#define N 2048*NUM_PICKUPS
+#define NUM_PICKUPS 4
+#define N 1024*NUM_PICKUPS
 #define PI 3.14159265359
 // Sample data signal 
 
@@ -32,41 +32,74 @@ extern "C" {
 #define REVOLUTION_FREQUENCY 11245.f
 
 
-std::vector<double> fillSampleData(std::vector<double>& data, float frequency) {
-    float increment = frequency * 2. * PI;
-    const std::vector<float> pickupOffsets{0, 0.001, 0.00013, 0.002 };
-    for(int turn = 0; turn < N; turn++) {
-        for(int j = 0; j < NUM_PICKUPS; j++) {
-            float pos = (turn + pickupOffsets[j]) / REVOLUTION_FREQUENCY;
-            data[turn] = AMP * std::sin(pos * increment);
+
+
+
+class FFTContainer {
+public:
+    FFTContainer(int size): size { size } {
+        int outSize = size / 2 + 1; 
+        in          = std::vector<double>(size);
+        window      = std::vector<double>(size);
+        out         = std::vector<fftw_complex>(outSize);
+        magnitude   = std::vector<double>(outSize);
+        
+        plan = fftw_plan_dft_r2c_1d(size, in.data(), out.data(), FFTW_ESTIMATE);
+        
+        for(int i = 0; i < in.size(); i++) {  
+            window[i] = 0.5 * (1 - std::cos(2*PI*i / (in.size() - 1)));
         }
     }
 
-    return data;
-}
+    ~FFTContainer() {
+        fftw_destroy_plan(plan);
+    }
 
-void fillMagnitude(std::vector<fftw_complex>& data, std::vector<double>& magnitude) {
-    for(int i = 0; i < magnitude.size(); i++) {
-        magnitude[i] = std::sqrt(data[i][0] * data[i][0] + data[i][1] * data[i][1]) / (double)N;  
-    } 
-}
+    void fillMagnitude() {
+        float scale = 2.0 / (double)size;
+        for(int i = 0; i < magnitude.size(); i++) {
+            magnitude[i] = std::sqrt(out[i][0] * out[i][0] + out[i][1] * out[i][1]) * scale;  
+        } 
+    }
+
+    void fillSampleData(float frequency) {
+        float increment = frequency * 2. * PI;
+        const std::vector<float> pickupOffsets{0, 0.001, 0.00013, 0.002 };
+
+        double totalEnergy = 0.0;
+        for(int turn = 0; turn < size; turn++) {
+            for(int j = 0; j < NUM_PICKUPS; j++) {
+                float pos = (turn + pickupOffsets[j]) / REVOLUTION_FREQUENCY;
+                in[turn] = (AMP * std::sin(pos * increment));
+            }
+        }
+    }
+    std::vector<double>& analyse(float frequency) {
+        fillSampleData(frequency);
+        fftw_execute(plan);
+        fillMagnitude();
+        return magnitude;
+    }
+
+private: 
+    int size;
+    std::vector<double> magnitude;
+    std::vector<double> in;
+    std::vector<fftw_complex> out;
+    std::vector<double> window;
+    fftw_plan plan;
+};
 
 
 int main() {
-    Naff h{N};
+    FFTContainer container1{N};
+    FFTContainer container2{N*4};
 
-    // TODO Aligned?
-    const int outSize = N / 2 + 1; 
-    std::vector<double> sampleData(N);
-    std::vector<fftw_complex> out(outSize);
-    std::vector<double> magnitude(outSize);
-
-    fftw_plan p = fftw_plan_dft_r2c_1d(N, sampleData.data(), out.data(), FFTW_ESTIMATE);
      
     bool running = true;
     int counter = 0; 
 
-    std::string testFile = "tune_data/7343/match10/07343_64k_B1H_Q10_20181025_05h05m39s.h5";
+    //std::string testFile = "tune_data/7343/match10/07343_64k_B1H_Q10_20181025_05h05m39s.h5";
     //HDFLib::HDFFile test = HDFLib::HDFFile(testFile);
     //test.open();
     //test.setTranspose(true);
@@ -76,12 +109,13 @@ int main() {
         InitWindow();
         while(running) {
             float frequency = 82.145 + counter / 20.;
-            fillSampleData(sampleData, frequency);
-            h.performAnalysis(sampleData);
-            fftw_execute(p);
-            fillMagnitude(out, magnitude);
-            running = DrawPoints(magnitude, frequency, N, REVOLUTION_FREQUENCY);
-            //usleep(10000); // = 0.01 second.
+            auto data1 = container1.analyse(frequency);
+            auto data2 = container2.analyse(frequency);
+            ClearCanvas();
+            DrawPoints(data1, frequency, N, REVOLUTION_FREQUENCY, { 1.0, 0.0, 1.0, 1.0 });
+            DrawPoints(data2, frequency, N*4, REVOLUTION_FREQUENCY, { .1, 0.0, 1.0, 1.0 });
+            running = FlushCanvas();
+            usleep(1000000); // = 0.01 second.
             counter++;
         }
         CloseWindow();

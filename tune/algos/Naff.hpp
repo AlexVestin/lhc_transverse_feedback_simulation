@@ -28,17 +28,17 @@ class Naff {
         }
 
     double naffFunc(double omega) {
-		int i;
-		double sum1 = 0, sum2 = 0, cosine, sine;
+			int i;
+			double sum1 = 0, sum2 = 0, cosine, sine;
 
-		for (i=0; i < NAFFPoints; i++) {
-			cosine = std::cos(omega*i*NAFFdt);
-			sine   = std::sin(omega*i*NAFFdt);
-			sum1  += cosine*NAFFData[i];
-			sum2  += sine*NAFFData[i];
-		}
+			for (i=0; i < NAFFPoints; i++) {
+				cosine = std::cos(omega*i*NAFFdt);
+				sine   = std::sin(omega*i*NAFFdt);
+				sum1  += cosine*NAFFData[i];
+				sum2  += sine*NAFFData[i];
+			}
 
-		return std::pow(sum1, 2) + std::pow(sum2, 2);
+			return std::pow(sum1, 2) + std::pow(sum2, 2);
 	}
 
     double arithmeticAverage(std::vector<double>& y, int n) {
@@ -70,7 +70,7 @@ class Naff {
 		maxFactor = maximize?-1:1;
 
 		x0 = xGuess[index];
-		f0 = maxFactor*naffFunc(x0);
+		f0 = maxFactor * naffFunc(x0);
 		xBest = x0;
 		fBest = f0;
 
@@ -402,7 +402,7 @@ class Naff {
 				}
 			}
 
-            std::cout << "best:"<< iBest << ":" << maxMag2 << std::endl;
+			// std::cout << "best:"<< iBest << ":" << maxMag2 << std::endl;
 			
 			if (iBest==0)
 				break;
@@ -466,54 +466,54 @@ class Naff {
 	}
 
     float performAnalysis(std::vector<double>& data) {
-        const int maxFrequencies = 8;
-		std::vector<double> frequency(maxFrequencies);
-		std::vector<double> amplitude(maxFrequencies);
-		std::vector<double> phase(maxFrequencies);
-		std::vector<double> significance(maxFrequencies);
-        double t0 = 0.0;
-		double dt = 1.0;
-		int points = data.size();
-        std::vector<double> magnitude2(data.size());
+			const int maxFrequencies = 8;
+			std::vector<double> frequency(maxFrequencies);
+			std::vector<double> amplitude(maxFrequencies);
+			std::vector<double> phase(maxFrequencies);
+			std::vector<double> significance(maxFrequencies);
+			double t0 = 0.0;
+			double dt = 1.0;
+			int points = data.size();
+			std::vector<double> magnitude2(data.size());
 
-        /* these control termination of the iteration for frequencies: */
-		/* min acceptable contribution of frequency */
-		double fracRMSChangeLimit = 0.0; 
-		/* maximum number of frequencies */
-		/* these control the accuracy of each frequency: */
-		/* maximum iteractions of parabolic optimizer */
-		double freqCycleLimit = 100; 
-		/* acceptable fractional accuracy of frequency */
-		double fracFreqAccuracyLimit = 0.01;
-		/* search only for frequencies between these limits */
-		double lowerFreqLimit = 0; 
-		double upperFreqLimit = 100;
+			/* these control termination of the iteration for frequencies: */
+			/* min acceptable contribution of frequency */
+			double fracRMSChangeLimit = 0.0; 
+			/* maximum number of frequencies */
+			/* these control the accuracy of each frequency: */
+			/* maximum iteractions of parabolic optimizer */
+			double freqCycleLimit = 100; 
+			/* acceptable fractional accuracy of frequency */
+			double fracFreqAccuracyLimit = 0.01;
+			/* search only for frequencies between these limits */
+			double lowerFreqLimit = 0; 
+			double upperFreqLimit = 100;
 
-        performNAFF(
-            frequency, 
-            amplitude, 
-            phase, 
-            significance, 
-            t0, 
-            dt, 
-            data,
-            points, 
-            fracRMSChangeLimit, 
-            maxFrequencies, 
-            freqCycleLimit, 
-            fracFreqAccuracyLimit, 
-            lowerFreqLimit, 
-            upperFreqLimit);
-        
-        for (int i = 0; i < maxFrequencies; i++) {
-			std::cout << std::to_string(i)+ ", "+ 
-            std::to_string(frequency[i]*points) + ", "+ 
-            std::to_string(amplitude[i])+", "+ 
-            std::to_string(phase[i]) +", "+ 
-            std::to_string(significance[i]) << std::endl;
-            
-		}
-        std::cout << "------------------------\n" << std::endl;
+			performNAFF(
+					frequency, 
+					amplitude, 
+					phase, 
+					significance, 
+					t0, 
+					dt, 
+					data,
+					points, 
+					fracRMSChangeLimit, 
+					maxFrequencies, 
+					freqCycleLimit, 
+					fracFreqAccuracyLimit, 
+					lowerFreqLimit, 
+					upperFreqLimit);
+			
+				//for (int i = 0; i < maxFrequencies; i++) {
+				//std::cout << std::to_string(i)+ ", "+ 
+        //    std::to_string(frequency[i]*points) + ", "+ 
+        //    std::to_string(amplitude[i])+", "+ 
+        //    std::to_string(phase[i]) +", "+ 
+        //    std::to_string(significance[i]) << std::endl;
+        //    
+				//}
+        //std::cout << "------------------------\n" << std::endl;
         return 0;
     };
     private:
