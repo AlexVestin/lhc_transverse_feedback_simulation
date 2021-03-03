@@ -2,6 +2,8 @@
 #include <iostream>
 #include <math.h>
 #include <cstring>
+#include "brent.hpp"
+
 
 extern "C" {
     #include <fftw3.h>
@@ -14,7 +16,6 @@ class Naff {
             in = (double*)fftw_malloc(size * sizeof(double));
             out = (fftw_complex*)fftw_malloc(size * sizeof(fftw_complex)); 
             p = fftw_plan_dft_r2c_1d(size, in, out, FFTW_ESTIMATE);
-
         };
 
         ~Naff() {
@@ -41,12 +42,12 @@ class Naff {
 		return std::pow(sum1, 2) + std::pow(sum2, 2);
 	}
 
-    double arithmeticAverage(std::vector<double>& y, int n) {
+    double arithmeticAverage(std::vector<double>& y) {
 		double sum = 0;
-		for (int i=0; i<n; i++) 
+		for (int i=0; i< y.size(); i++) 
 			sum += y[i];
 
-		return sum / n;
+		return sum / y.size();
 	}
 
     int oneDParabolicOptimization(
@@ -247,23 +248,24 @@ class Naff {
 
 	}
 
-	int simpleFFT(std::vector<double>& magnitude2, std::vector<double>& data, int points) {
-        int sizeLimit = points+2;
-		int FFTFreqs, i;
-
-		if (sizeLimit < (points+2) ) 
-			return 0;
-
+	double maxFFTValue(std::vector<double>& data) {
         memcpy(in, data.data(), data.size() * sizeof(double));
         fftw_execute(p);    
-		FFTFreqs = points/2+1;
-
-		for (i=0; i<FFTFreqs; i++) {
-            // TODO: why * 2
-            magnitude2[i] = std::pow(out[i][0]*2, 2) + std::pow(out[i][1]*2, 2) / (double)data.size();
+		size_t M = data.size();
+    	int imax = 0;
+    	double max = 0;
+		for(size_t i = 0; i < M; i++) {
+			double amp = out[i][0]*out[i][0] + out[i][1]*out[i][1];
+			if( amp > max )
+			{
+				max = amp;
+				imax = (int)i;
+			} 
 		}
-		return FFTFreqs;
+
+		return (1.0*imax) / M; 
     }
+
 
     long calculatePhaseAndAmplitudeFromFreq (
 			std::vector<double>& hanning, 
@@ -369,7 +371,7 @@ class Naff {
 		NAFFdt = dt;
 
 		/* subtract off mean and apply the Hanning window */
-		mean = arithmeticAverage(data, points);
+		mean = arithmeticAverage(data);
 		for (i=0; i < points; i++) {
 			hanning[i]  = (1 - std::cos(M_PI*2*i/(points-1.0)))/2;
 			NAFFData[i] = (data[i]-mean)*hanning[i];
@@ -390,7 +392,7 @@ class Naff {
 			amplitude[i] = phase[i] = significance[i] = frequency[i] = -1;
 
 		while (freqsFound < maxFrequencies) {
-			simpleFFT(magnitude2, NAFFData, points);
+			//simpleFFT(magnitude2, NAFFData, points);
 			maxMag2 = 0;
 			iBest = 0;
 			for (i=0; i < FFTFreqs; i++) {
@@ -466,7 +468,8 @@ class Naff {
 	}
 
     float performAnalysis(std::vector<double>& data) {
-        const int maxFrequencies = 8;
+        
+		const int maxFrequencies = 8;
 		std::vector<double> frequency(maxFrequencies);
 		std::vector<double> amplitude(maxFrequencies);
 		std::vector<double> phase(maxFrequencies);
@@ -516,6 +519,30 @@ class Naff {
         std::cout << "------------------------\n" << std::endl;
         return 0;
     };
+
+	double performAnalysis2(std::vector<double>& data) {
+		merit_args *margs = (merit_args*)malloc(sizeof(merit_args));
+		int N = data.size();
+		margs->N = N;
+		margs->window = (std::complex<double>*)malloc(N*sizeof(std::complex<double>));
+
+			/* subtract off mean and apply the Hanning window */
+		double mean = arithmeticAverage(data);
+		double (*merit_function)(double,const merit_args*) = minus_magnitude_fourier_integral;
+
+		double order = 1.0;
+		hann_harm_window(margs->window, margs->N, order);
+		std::vector<double> hanning(N);
+		for (int i=0; i < N; i++) {
+			hanning[i]  = (1 - std::cos(M_PI*2*i/(N-1.0)))/2;
+			NAFFData[i] = (data[i]-mean)*hanning[i];
+		}
+		double fft_estimate = maxFFTValue(data);
+		double step = 1./N;
+    	double naff_estimate = brent_minimize( merit_function, fft_estimate-step, fft_estimate+step, margs); 
+		free(margs->window);
+    	free(margs);
+	}
     private:
         double* in;
         fftw_complex* out;
