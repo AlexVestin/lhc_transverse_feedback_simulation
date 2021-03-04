@@ -82,11 +82,22 @@ SkCanvas* dCanvas;
 GLFWwindow* window;
 
 
-int firstIndex = -1;
+double firstFrequency = -1;
+const bool usefirstFrequency = true;
 int counter = 0;
 double avgError = 0, currentAvgError = 0;
-const bool useFirstIndex = true;
 
+
+
+int frequencyToBin(double frequency, int nfft, int sampleRate) {
+    double fRes = sampleRate / (double)nfft;
+    return frequency / fRes; 
+}
+
+double binToFrequency(int bin, int nfft, int sampleRate) {
+    double fRes = sampleRate / (double)nfft;
+    return fRes * bin; 
+}
 
 void error_callback(int error, const char* description) {
 	fputs(description, stderr);
@@ -169,20 +180,19 @@ void DrawString(const char* text, SkFont& font, SkPaint& paint, int x, int y) {
     dCanvas->drawTextBlob(blob, x, y, paint);
 }
 
-bool DrawPoints(std::vector<double> data, double realFrequency) {
+void ClearCanvas() {
+    dCanvas->clear( { 1.0, 1.0, 1.0, 1.0 });
     glfwPollEvents();
+}
+
+void DrawPoints(std::vector<double> data, double realFrequency, int nfft, int sampleRate, SkColor4f col) {
     SkPaint paint;
-    paint.setColor(SK_ColorWHITE);
-    dCanvas->drawPaint(paint);
 
     dCanvas->save();
     // Move to middle of canvas
     dCanvas->translate(kWidth/2, kHeight/2);
-
-
     // freq res and stuff
-    const int revFrequency = 11245;
-    const float frequencyResolution = revFrequency / (float)((data.size() - 1) * 2);
+    double frequencyResolution = sampleRate / (double)nfft;
 
     // Find max, index of max and mean
     int maxIndex = -1;
@@ -198,31 +208,38 @@ bool DrawPoints(std::vector<double> data, double realFrequency) {
     
     // Sizing of graph
     int size = data.size();
-    const int rangeSize = 10;
+    
 
-    if (firstIndex == -1) {
-        firstIndex = maxIndex;
+    if (firstFrequency == -1) {
+        firstFrequency = maxIndex;
     }
 
-    const int idx = !useFirstIndex ? maxIndex : firstIndex; 
-    int lower = std::max(idx - rangeSize, 0);
-    int upper = std::min(idx + rangeSize, size - 1);
-    const int nPoints = upper - lower;
+    int frange = 20;
 
-    const double width = ((float)kWidth / 2.) / (upper - lower) ;
+    double lf = realFrequency - frange;
+    double uf = realFrequency + frange;
+
+    int lower = std::max(frequencyToBin(lf, nfft, sampleRate), 0);
+    int upper = std::min(frequencyToBin(uf, nfft, sampleRate), size - 1);
+    int nPoints = upper - lower;
+
+    double width = kWidth / 2.;
 
 
     // If scale for maxvalue
     // const double height = ((float)kHeight / 4.) / maxValue;
-    const double height = ((float)kHeight / 4.) / 10.;
-
-    const int s = 4;
-    const int ms = 6;
+    double height = ((float)kHeight / 4.) * 0.25;
 
 
+    // Box sizes
+    int s = 4;
+    int ms = 6;
+    dCanvas->translate(-kWidth/4, 0);
     for(int i = 0; i < nPoints; i++) {
         int idx = i + lower; 
-        double pos =  i - nPoints / 2;
+        double f = binToFrequency(idx, nfft, sampleRate);
+        double pos = (f - lf) / (uf - lf);  
+
         double h = -data[idx] * height;
 
 
@@ -236,12 +253,7 @@ bool DrawPoints(std::vector<double> data, double realFrequency) {
             dCanvas->drawRect( { x1, y1, x2, y2 }, paint);
         }
 
-
-        if(!(idx % 4)) {
-            paint.setColor4f({0.3, 0.3, 0.3, 1.0});
-        } else {
-            paint.setColor4f({0, 0, 1, 1.0});
-        }
+        paint.setColor4f(col);
 
         float x1 = pos*width - s/2;
         float y1 = h + s/2;
@@ -250,15 +262,17 @@ bool DrawPoints(std::vector<double> data, double realFrequency) {
         dCanvas->drawRect( { x1, y1, x2, y2 }, paint);
     }   
 
-    paint.setColor4f({1.0, 0.0, 0.0, 0.5 });
-    double rPosX = (realFrequency / frequencyResolution) - (lower + nPoints / 2.); 
+    dCanvas->translate(kWidth/4, 0);
+
+    paint.setColor4f({1.0, 0.0, 0.0, 0.5 }); 
     paint.setStyle(SkPaint::kStroke_Style);
     SkPath path;
-    path.moveTo(rPosX * width, 0);
-    path.lineTo(rPosX * width, -150);
+    path.moveTo(0, 0);
+    path.lineTo(0, -150);
     paint.setStrokeWidth(1);
     dCanvas->drawPath(path, paint);
 
+    /*
     // Draw text stuff
     SkPaint textPaint;
     SkFont font;
@@ -268,8 +282,6 @@ bool DrawPoints(std::vector<double> data, double realFrequency) {
     const int fontSize = 16;
     const int paddedFontSize = 18;
     font.setSize(fontSize);
-    // stringStream << "Max value: ";
-    // stringStream << maxValue
 
     std::string infoStr = "Index: " + 
         std::to_string(maxIndex) + 
@@ -292,19 +304,18 @@ bool DrawPoints(std::vector<double> data, double realFrequency) {
 
     double error = std::abs(frequencyResolution * maxIndex - realFrequency);
     avgError += error;
-    
 
-    std::string errorStr = "Error: " + std::to_string(error) + " Average error: " + std::to_string(avgError / (double)counter);
-    
+    std::string errorStr = "Error: " + std::to_string(error) + " Average error: " + std::to_string(avgError / (double)counter);    
     DrawString(errorStr.c_str(), font, textPaint, textPosX, textPosY + paddedFontSize * 3);
-
-    dContext->flush();
-    glfwSwapBuffers(window);
+    */
     dCanvas->restore();
 
+}
 
-
-    return !glfwWindowShouldClose(window);
+bool FlushCanvas() {
+    dContext->flush();
+    glfwSwapBuffers(window);
+    return !glfwWindowShouldClose(window); 
 }
 
 

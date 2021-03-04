@@ -5,19 +5,22 @@
 #include <math.h>
 #include <complex>
 
+#define cplx std::complex<double> 
+#define cplxvec std::vector<cplx>
 
-struct merit_args
+
+struct merit_args_cpp
 {
     size_t N;
-    std::complex<double>* window;
-    std::complex<double>* signal;
+    cplxvec window;
+    cplxvec signal;
 };
 
-typedef struct merit_args merit_args;
+typedef struct merit_args_cpp merit_args_cpp;
 
 
 
-void hann_harm_window(std::complex<double> window[], const size_t N, const double n)
+void hann_harm_window_cpp(cplxvec& window, const size_t N, const double n)
 {
     double T1 = 0.;
     double T2 = N;
@@ -42,31 +45,27 @@ void hann_harm_window(std::complex<double> window[], const size_t N, const doubl
     return;
 }
 
-std::complex<double> inner_product(const std::complex<double>* signal, double amplitude, double frequency,const std::complex<double>* window, size_t N)
+std::complex<double> inner_product(const cplxvec& signal, double amplitude, double frequency,const cplxvec& window, size_t N)
 {
     double omega = (2*M_PI)*frequency;
     std::complex<double> result = 0.;
     double theta = omega*N;
     for( size_t i = N; i--; )
     {
-        // theta -= omega;
-        // double r = signal[i].real()*cos(theta) * window[i].real();
-        // double imag = signal[i].imag()*-sin(theta) * window[i].imag();
         theta -= omega;
-        std::complex<double> val(cos(theta), -sin(theta));
+        cplx val = cplx(cos(theta), -sin(theta));
         result += signal[i]*val*window[i];
     }
-    return (amplitude*result)/ (double)N;
+    return (amplitude*result) / (double)N;
 }
 
 
-double minus_magnitude_fourier_integral(double frequency, const merit_args* S)
-{
+double minus_magnitude_fourier_integral_v2(double frequency, const merit_args_cpp* S) {
     std::complex<double> amp = inner_product(S->signal, 1., frequency, S->window, S->N);
     return -(amp.real()*amp.real() + amp.imag()*amp.imag());
 }
 
-double brent_minimize(double (*f)(double,const merit_args*), double min, double max, const merit_args* S)
+double brent_minimize_cpp(double (*f)(double,const merit_args_cpp*), double min, double max, const merit_args_cpp* S)
 {
 
     const int max_iter = 10000;

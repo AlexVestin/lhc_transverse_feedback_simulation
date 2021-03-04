@@ -7,6 +7,8 @@
 
 extern "C" {
     #include <fftw3.h>
+	#include "fft.h"
+	#include "../build/include/frequency.h"
 }
 
 class Naff {
@@ -29,20 +31,20 @@ class Naff {
         }
 
     double naffFunc(double omega) {
-		int i;
-		double sum1 = 0, sum2 = 0, cosine, sine;
+			int i;
+			double sum1 = 0, sum2 = 0, cosine, sine;
 
-		for (i=0; i < NAFFPoints; i++) {
-			cosine = std::cos(omega*i*NAFFdt);
-			sine   = std::sin(omega*i*NAFFdt);
-			sum1  += cosine*NAFFData[i];
-			sum2  += sine*NAFFData[i];
-		}
+			for (i=0; i < NAFFPoints; i++) {
+				cosine = std::cos(omega*i*NAFFdt);
+				sine   = std::sin(omega*i*NAFFdt);
+				sum1  += cosine*NAFFData[i];
+				sum2  += sine*NAFFData[i];
+			}
 
-		return std::pow(sum1, 2) + std::pow(sum2, 2);
+			return std::pow(sum1, 2) + std::pow(sum2, 2);
 	}
 
-    double arithmeticAverage(std::vector<double>& y) {
+    double arithmeticAverage(const std::vector<double>& y) {
 		double sum = 0;
 		for (int i=0; i< y.size(); i++) 
 			sum += y[i];
@@ -71,7 +73,7 @@ class Naff {
 		maxFactor = maximize?-1:1;
 
 		x0 = xGuess[index];
-		f0 = maxFactor*naffFunc(x0);
+		f0 = maxFactor * naffFunc(x0);
 		xBest = x0;
 		fBest = f0;
 
@@ -248,7 +250,7 @@ class Naff {
 
 	}
 
-	double maxFFTValue(std::vector<double>& data) {
+	double maxFFTValue(const std::vector<double>& data) {
         memcpy(in, data.data(), data.size() * sizeof(double));
         fftw_execute(p);    
 		size_t M = data.size();
@@ -357,7 +359,7 @@ class Naff {
 		int i, freqsFound = 0, FFTFreqs;
 		double wStart, freqSpacing;
 		int iBest, code, trys;
-		double scale, maxMag2;
+		double maxMag2;
 		std::vector<double> sine(points);
 		std::vector<double> cosine(points);
 		std::vector<double> magnitude2(points);
@@ -404,13 +406,13 @@ class Naff {
 				}
 			}
 
-            std::cout << "best:"<< iBest << ":" << maxMag2 << std::endl;
+			// std::cout << "best:"<< iBest << ":" << maxMag2 << std::endl;
 			
 			if (iBest==0)
 				break;
 			
 			wStart = frequency[freqsFound] = iBest*freqSpacing*M_PI*2;
-			scale = naffFunc(wStart);
+			// scale = naffFunc(wStart);
 			for (trys = 0; trys < 2; trys++) {
 				code = oneDParabolicOptimization(
 						freqsFound,
@@ -468,80 +470,106 @@ class Naff {
 	}
 
     float performAnalysis(std::vector<double>& data) {
-        
-		const int maxFrequencies = 8;
-		std::vector<double> frequency(maxFrequencies);
-		std::vector<double> amplitude(maxFrequencies);
-		std::vector<double> phase(maxFrequencies);
-		std::vector<double> significance(maxFrequencies);
-        double t0 = 0.0;
-		double dt = 1.0;
-		int points = data.size();
-        std::vector<double> magnitude2(data.size());
+			const int maxFrequencies = 8;
+			std::vector<double> frequency(maxFrequencies);
+			std::vector<double> amplitude(maxFrequencies);
+			std::vector<double> phase(maxFrequencies);
+			std::vector<double> significance(maxFrequencies);
+			double t0 = 0.0;
+			double dt = 1.0;
+			int points = data.size();
+			std::vector<double> magnitude2(data.size());
 
-        /* these control termination of the iteration for frequencies: */
-		/* min acceptable contribution of frequency */
-		double fracRMSChangeLimit = 0.0; 
-		/* maximum number of frequencies */
-		/* these control the accuracy of each frequency: */
-		/* maximum iteractions of parabolic optimizer */
-		double freqCycleLimit = 100; 
-		/* acceptable fractional accuracy of frequency */
-		double fracFreqAccuracyLimit = 0.01;
-		/* search only for frequencies between these limits */
-		double lowerFreqLimit = 0; 
-		double upperFreqLimit = 100;
+			/* these control termination of the iteration for frequencies: */
+			/* min acceptable contribution of frequency */
+			double fracRMSChangeLimit = 0.0; 
+			/* maximum number of frequencies */
+			/* these control the accuracy of each frequency: */
+			/* maximum iteractions of parabolic optimizer */
+			double freqCycleLimit = 100; 
+			/* acceptable fractional accuracy of frequency */
+			double fracFreqAccuracyLimit = 0.01;
+			/* search only for frequencies between these limits */
+			double lowerFreqLimit = 0; 
+			double upperFreqLimit = 100;
 
-        performNAFF(
-            frequency, 
-            amplitude, 
-            phase, 
-            significance, 
-            t0, 
-            dt, 
-            data,
-            points, 
-            fracRMSChangeLimit, 
-            maxFrequencies, 
-            freqCycleLimit, 
-            fracFreqAccuracyLimit, 
-            lowerFreqLimit, 
-            upperFreqLimit);
-        
-        for (int i = 0; i < maxFrequencies; i++) {
-			std::cout << std::to_string(i)+ ", "+ 
-            std::to_string(frequency[i]*points) + ", "+ 
-            std::to_string(amplitude[i])+", "+ 
-            std::to_string(phase[i]) +", "+ 
-            std::to_string(significance[i]) << std::endl;
-            
-		}
-        std::cout << "------------------------\n" << std::endl;
+			performNAFF(
+					frequency, 
+					amplitude, 
+					phase, 
+					significance, 
+					t0, 
+					dt, 
+					data,
+					points, 
+					fracRMSChangeLimit, 
+					maxFrequencies, 
+					freqCycleLimit, 
+					fracFreqAccuracyLimit, 
+					lowerFreqLimit, 
+					upperFreqLimit);
+			
+				//for (int i = 0; i < maxFrequencies; i++) {
+				//std::cout << std::to_string(i)+ ", "+ 
+        //    std::to_string(frequency[i]*points) + ", "+ 
+        //    std::to_string(amplitude[i])+", "+ 
+        //    std::to_string(phase[i]) +", "+ 
+        //    std::to_string(significance[i]) << std::endl;
+        //    
+				//}
+        //std::cout << "------------------------\n" << std::endl;
         return 0;
     };
 
-	double performAnalysis2(std::vector<double>& data) {
-		merit_args *margs = (merit_args*)malloc(sizeof(merit_args));
+
+
+
+	double performAnalysis2(std::vector<double>& data, int sampleRate, double actualFrequency) {
+		merit_args_cpp margs;
 		int N = data.size();
-		margs->N = N;
-		margs->window = (std::complex<double>*)malloc(N*sizeof(std::complex<double>));
+		margs.N = N;
+		margs.window = cplxvec(N);
+		margs.signal = cplxvec(N);
 
-			/* subtract off mean and apply the Hanning window */
+
+		double _Complex* signal2 = (double _Complex*)malloc(N * sizeof(double _Complex));
+		for(int i = 0; i < data.size(); i++) {
+			signal2[i] = data[i];
+		}	
+
+
+		double Q = get_q(signal2, N, 2.0, 0);
+
+		// Subtract mean from signal
 		double mean = arithmeticAverage(data);
-		double (*merit_function)(double,const merit_args*) = minus_magnitude_fourier_integral;
+		for(int i = 0; i < data.size(); i++) {
+			margs.signal[i] = data[i] - mean;
+		}	
 
-		double order = 1.0;
-		hann_harm_window(margs->window, margs->N, order);
-		std::vector<double> hanning(N);
-		for (int i=0; i < N; i++) {
-			hanning[i]  = (1 - std::cos(M_PI*2*i/(N-1.0)))/2;
-			NAFFData[i] = (data[i]-mean)*hanning[i];
-		}
+
+		double (*merit_function)(double, const merit_args_cpp*) = minus_magnitude_fourier_integral_v2;
+
+		double order = 2.0;
+		hann_harm_window_cpp(margs.window, margs.N, order);
+
+		double _Complex* signal = (double _Complex*)malloc(N * sizeof(double _Complex));
+		for(int i = 0; i < N; i++) {
+			signal[i] = data[i];
+		}  
+
+		
 		double fft_estimate = maxFFTValue(data);
 		double step = 1./N;
-    	double naff_estimate = brent_minimize( merit_function, fft_estimate-step, fft_estimate+step, margs); 
-		free(margs->window);
-    	free(margs);
+
+		double v0 = (fft_estimate-step);
+		double v1 = fft_estimate ;
+		double v2 = (fft_estimate+step) ;
+		double naff_estimate = brent_minimize_cpp( merit_function, fft_estimate-step, fft_estimate+step, &margs); 
+
+		std::cout  << " -- " << Q << " | " << naff_estimate << " | " << actualFrequency <<  std::endl;
+
+
+		return naff_estimate;
 	}
     private:
         double* in;
