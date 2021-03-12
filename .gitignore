@@ -3,3 +3,4 @@ venv/
 tune/dependencies/
 tune/tune_data/
 *.o
+*.wav

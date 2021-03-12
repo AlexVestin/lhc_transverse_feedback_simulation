@@ -214,7 +214,7 @@ void DrawPoints(std::vector<double> data, double realFrequency, int nfft, int sa
         firstFrequency = maxIndex;
     }
 
-    int frange = 20;
+    int frange = 100;
 
     double lf = realFrequency - frange;
     double uf = realFrequency + frange;

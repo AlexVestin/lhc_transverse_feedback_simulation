@@ -4,7 +4,7 @@
 #include <cstring>
 #include "HDFLib.h"
 //#include "algos/Hilbert.hpp"
-
+#include "AudioFile.h"
 #include <math.h>
 
 #ifdef SKIA
@@ -22,18 +22,15 @@ extern "C" {
 
 // Number of samples to use for analysis
 #define NUM_PICKUPS 1
-#define N 1028*NUM_PICKUPS
+#define N 2048*NUM_PICKUPS
 #define PI 3.14159265359
 // Sample data signal 
 
 #define AMP 1.0
 // #define FREQUENCY 82.13
 #define AVG_NOISE_AMT 0.03
-#define REVOLUTION_FREQUENCY 1.//11245.f
-
-
-
-
+#define REVOLUTION_FREQUENCY 48000//11245.f
+const double maxFPS = 60.0;
 
 class FFTContainer {
 public:
@@ -44,6 +41,13 @@ public:
         out         = std::vector<fftw_complex>(outSize);
         magnitude   = std::vector<double>(outSize);
         
+
+        // Audio stuff
+        audioFile.load ("./audio.wav");
+        audioSampleRate = audioFile.getSampleRate();
+        audioLengthInSeconds = audioFile.getLengthInSeconds();
+        audioNumSamples = audioFile.getNumSamplesPerChannel();
+
         plan = fftw_plan_dft_r2c_1d(size, in.data(), out.data(), FFTW_ESTIMATE);
         
         for(int i = 0; i < in.size(); i++) {  
@@ -78,8 +82,19 @@ public:
             }
         }
     }
-    std::vector<double>& analyse(float frequency) {
-        fillSampleData(frequency);
+
+    void fillAudioData(int frameIdx) {
+        int offset = (frameIdx / maxFPS) * audioSampleRate;
+        if(offset + size > audioNumSamples) {
+            return;
+        }
+        for(int i = 0; i < size; i++) {
+            in[i] = *(audioFile.samples[0].data() + offset + i);
+        }
+    }
+
+    std::vector<double>& analyse(float frequency, int count) {
+        fillAudioData(count);
         fftw_execute(plan);
         fillMagnitude();
         return magnitude;
@@ -92,6 +107,13 @@ private:
     std::vector<fftw_complex> out;
     std::vector<double> window;
     fftw_plan plan;
+
+    // Audio stuff
+    AudioFile<double> audioFile;
+    size_t audioSampleRate;
+    double audioLengthInSeconds = 0;
+    size_t audioNumSamples = 0;
+
 };
 
 
@@ -99,6 +121,8 @@ int main() {
     FFTContainer container1{N};
     FFTContainer container2{N*4};
     Naff n{N};
+
+
 
      
     bool running = true;
@@ -109,27 +133,35 @@ int main() {
     //test.open();
     //test.setTranspose(true);
     //std::cout<<"data: "<<test[255].get()[0]<<std::endl;
-    
+
     #ifdef SKIA
         InitWindow();
+        const double maxPeriod = 1.0 / maxFPS;
+        double lastTime = 0.0;
+
         while(running) {
-            
-            
-            float frequency = 12.431783351 + counter / 20.;
-            
-            
-            auto data1 = container1.analyse(frequency);
-            auto data10 = container1.getSampleData();
-            auto data2 = container2.analyse(frequency);
+            double time = glfwGetTime();
+            double deltaTime = time - lastTime;
+            if(deltaTime > maxPeriod) {
+                float frequency = 100;// + counter / 20.;
+                
+                
+                auto data1 = container1.analyse(frequency, counter);
+                auto data10 = container1.getSampleData();
+                auto data2 = container2.analyse(frequency, counter);
 
-            n.performAnalysis2(data10, REVOLUTION_FREQUENCY, frequency);
+                n.performAnalysis2(data10, REVOLUTION_FREQUENCY, frequency);
 
-            ClearCanvas();
-            DrawPoints(data1, frequency, N, REVOLUTION_FREQUENCY, { 1.0, 0.0, 1.0, 1.0 });
-            DrawPoints(data2, frequency, N*4, REVOLUTION_FREQUENCY, { .1, 0.0, 1.0, 1.0 });
-            running = FlushCanvas();
-            usleep(10000); // = 0.01 second.
-            counter++;
+                ClearCanvas();
+                DrawPoints(data1, frequency, N, REVOLUTION_FREQUENCY, { 1.0, 0.0, 1.0, 1.0 });
+                DrawPoints(data2, frequency, N*4, REVOLUTION_FREQUENCY, { .1, 0.0, 1.0, 1.0 });
+                running = FlushCanvas();
+                usleep(1000); // = 0.01 second.
+                counter++;
+                lastTime = time;
+
+            }
+            
         }
         CloseWindow();
     #endif
